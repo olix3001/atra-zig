@@ -1,0 +1,30 @@
+@section(title, description, *children) {
+    div {
+        h1 { $title }
+        h3(style="margin-top: -1.5rem; font-size: 0.85rem; color: grey;") { $description }
+        $children
+    }
+}
+
+html(lang="en") {
+    head {
+        title { "Atra!" }
+        meta(charset="utf")
+    }
+    body {
+        %section(title="Intrinsics", description="Atra supports builtin functions like repetitions!") {
+            %repeat(n=3) |i| {
+                p {
+                    "I am a repeated tag number " $i "!"
+                    %repeat(n=$i) |j| {
+                        span { " | I am subrepeat number " $j }
+                    }
+                }
+            }
+        }
+
+        %section(title="Source", description="This is a source code of this file... kinda trippy :D") {
+            code { pre { %embedText(src="./src/example.atra") } }
+        }
+    }
+}
