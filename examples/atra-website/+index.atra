@@ -1,5 +1,13 @@
 %include(src="./navigation.atra")
 
+@feature-card(icon, title, description) {
+    div(class="feature-card") {
+        div(class="feature-icon") { $icon }
+        h3 { $title }
+        p { $description }
+    }
+}
+
 html(lang="en") {
     head {
         title { "Atra - Modern Template Language" }
@@ -35,12 +43,12 @@ html(lang="en") {
             div(class="container") {
                 h2(class="section-title") { "Why Atra?" }
                 div(class="features-grid") {
-                    #$feature_card(icon="⚡", title="Fast", description="Compiles to static HTML without additional dependencies")
-                    #$feature_card(icon="🧩", title="Component-based", description="Create reusable components with parameters")
-                    #$feature_card(icon="🎨", title="Styling", description="Built-in CSS support with style isolation")
-                    #$feature_card(icon="🔄", title="Special functions", description="Loop, if, each and other advanced functions")
-                    #$feature_card(icon="📁", title="Organization", description="Clean file and folder structure")
-                    #$feature_card(icon="🛠️", title="Simple", description="Easy to learn HTML-like syntax")
+                    %feature-card(icon="⚡", title="Fast", description="Compiles to static HTML without additional dependencies")
+                    %feature-card(icon="🧩", title="Component-based", description="Create reusable components with parameters")
+                    %feature-card(icon="🎨", title="Styling", description="Built-in CSS support with style isolation")
+                    %feature-card(icon="🔄", title="Special functions", description="Loop, if, each and other advanced functions")
+                    %feature-card(icon="📁", title="Organization", description="Clean file and folder structure")
+                    %feature-card(icon="🛠️", title="Simple", description="Easy to learn HTML-like syntax")
                 }
             }
         }
