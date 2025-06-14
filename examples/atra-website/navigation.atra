@@ -1,0 +1,50 @@
+@header {
+    header(class="main-header") {
+        nav(class="nav-container") {
+            div(class="nav-brand") {
+                a(href="index.html") { "Atra" }
+            }
+            ul(class="nav-links") {
+                li {
+                    a(href="index.html") { "Home" }
+                }
+                li {
+                    a(href="installation.html") { "Installation" }
+                }
+                li {
+                    a(href="docs.html") { "Documentation" }
+                }
+                li {
+                    a(href="examples.html") { "Examples" }
+                }
+            }
+        }
+    }
+}
+
+@footer {
+    footer(class="main-footer") {
+        div(class="footer-content") {
+            div(class="footer-section") {
+                h3 { "Atra" }
+                p { "Modern templating language for web development" }
+            }
+            div(class="footer-section") {
+                h3 { "Links" }
+                ul {
+                    li {
+                        a(href="https://github.com/olix3001/atra-zig") {
+                            "Github"
+                        }
+                    }
+                    li {
+                        a(href="docs.html") { "Documentation" }
+                    }
+                }
+            }
+        }
+        div(class="footer-bottom") {
+            p { "© 2025 Atra-zig. Built with Atra-zig." }
+        }
+    }
+}

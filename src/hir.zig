@@ -91,8 +91,9 @@ pub const ScopeStack = struct {
 pub const HirGen = struct {
     alloc: std.mem.Allocator,
     hir_tree: Tree,
-    ast_tree: *const ast.Tree,
+    ast_tree: *ast.Tree,
     scope_stack: ScopeStack,
+    generation_root_dir: *std.fs.Dir,
 
     intrinsics: *const std.StringHashMap(common.Intrinsic),
     includes_cache: std.StringHashMap(CachedTree),
@@ -111,12 +112,18 @@ pub const HirGen = struct {
     } || anyerror;
     const log_scope = std.log.scoped(.hirgen);
 
-    pub fn init(alloc: std.mem.Allocator, ast_tree: *const ast.Tree, intrinsics: *const std.StringHashMap(common.Intrinsic)) Self {
+    pub fn init(
+        alloc: std.mem.Allocator,
+        ast_tree: *ast.Tree,
+        intrinsics: *const std.StringHashMap(common.Intrinsic),
+        root_dir: *std.fs.Dir,
+    ) Self {
         return Self{
             .alloc = alloc,
             .hir_tree = .init(alloc),
             .ast_tree = ast_tree,
             .scope_stack = .init(alloc),
+            .generation_root_dir = root_dir,
 
             .intrinsics = intrinsics,
             .includes_cache = .init(alloc),

@@ -21,7 +21,13 @@ pub fn compileFromRoot(self: *Self, absolute_path: []const u8, target: std.io.An
     defer self.alloc.free(source_data);
     source_file.close();
 
-    var pipeline = try common.Pipeline.init(self.alloc, .{});
+    const root_dir_path = std.fs.path.dirname(absolute_path);
+    var root_dir = try std.fs.openDirAbsolute(root_dir_path.?, .{});
+    defer root_dir.close();
+
+    var pipeline = try common.Pipeline.init(self.alloc, .{
+        .root_dir = &root_dir,
+    });
     defer pipeline.deinit();
     var hir_result = try pipeline.processTextIntoHIR(source_data);
     defer hir_result.tree.deinit();
@@ -29,6 +35,7 @@ pub fn compileFromRoot(self: *Self, absolute_path: []const u8, target: std.io.An
     var buffered_writer: std.io.BufferedWriter(1024 * 8, @TypeOf(target)) = .{ .unbuffered_writer = target };
     const emitter = Emitter{ .tree = &hir_result.tree, .writer = buffered_writer.writer().any() };
     try emitter.emitFromRoot(hir_result.root);
+    try buffered_writer.flush();
 
     const instant_end = try std.time.Instant.now();
     const elapsed: f64 = @floatFromInt(instant_end.since(instant_start));

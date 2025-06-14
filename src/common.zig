@@ -38,13 +38,61 @@ pub fn Tree(comptime NodeType: type) type {
     };
 }
 
+// NOTE: This assumes that subtree lives at least long as main tree.
+pub fn copyASTSubtreeIntoTree(tree: *ast.Tree, subtree: *const ast.Tree, root: usize) !usize {
+    const alloc = tree.arena.allocator();
+    switch (subtree.nodes.items[root]) {
+        .basic_tag => |tag| {
+            const new_children = try alloc.alloc(usize, tag.children.len);
+            for (tag.children, 0..) |child, i|
+                new_children[i] = try copyASTSubtreeIntoTree(tree, subtree, child);
+            return try tree.addNode(.{ .basic_tag = .{
+                .name = tag.name,
+                .attributes = tag.attributes,
+                .children = new_children,
+            } });
+        },
+        .value => |value| return try tree.addNode(.{ .value = value }),
+        .func_call => |call| {
+            const new_children = try alloc.alloc(usize, call.children.len);
+            for (call.children, 0..) |child, i|
+                new_children[i] = try copyASTSubtreeIntoTree(tree, subtree, child);
+            return try tree.addNode(.{ .func_call = .{
+                .name = call.name,
+                .arguments = call.arguments,
+                .captures = call.captures,
+                .children = new_children,
+            } });
+        },
+        .fragment => |frag| {
+            const new_children = try alloc.alloc(usize, frag.len);
+            for (frag, 0..) |child, i|
+                new_children[i] = try copyASTSubtreeIntoTree(tree, subtree, child);
+            return try tree.addNode(.{ .fragment = new_children });
+        },
+        .macro_decl => |decl| {
+            const new_children = try alloc.alloc(usize, decl.children.len);
+            for (decl.children, 0..) |child, i|
+                new_children[i] = try copyASTSubtreeIntoTree(tree, subtree, child);
+            return try tree.addNode(.{ .macro_decl = .{
+                .name = decl.name,
+                .arguments = decl.arguments,
+                .children_arg = decl.children_arg,
+                .children = new_children,
+            } });
+        },
+    }
+}
+
 // Pipeline for lexing, parsing and transforming .atra files.
 pub const PipelineOptions = struct {
     intrinsics: ?std.StringHashMap(Intrinsic) = null,
+    root_dir: *std.fs.Dir,
 };
 pub const Pipeline = struct {
     alloc: std.mem.Allocator,
     intrinsics: std.StringHashMap(Intrinsic),
+    root_dir: *std.fs.Dir,
 
     const Self = @This();
     const log_scope = std.log.scoped(.pipeline);
@@ -52,6 +100,7 @@ pub const Pipeline = struct {
         return Self{
             .alloc = alloc,
             .intrinsics = options.intrinsics orelse try makeIntrinsics(alloc, DefaultIntrinsics),
+            .root_dir = options.root_dir,
         };
     }
 
@@ -77,7 +126,7 @@ pub const Pipeline = struct {
         var processed_ast = try self.processTextIntoAST(source);
         defer processed_ast.tree.deinit();
 
-        var hirgen = hir.HirGen.init(self.alloc, &processed_ast.tree, &self.intrinsics);
+        var hirgen = hir.HirGen.init(self.alloc, &processed_ast.tree, &self.intrinsics, self.root_dir);
         defer hirgen.deinit(true);
         const main_module = hirgen.lowerNode(processed_ast.root) catch |err| {
             std.debug.print("Caught hirgen errors: {}\n", .{std.json.fmt(hirgen.errors.items, .{ .whitespace = .indent_2 })});
@@ -140,17 +189,23 @@ pub const DefaultIntrinsics = struct {
     // will be available to the caller.
     pub fn include(args: IntrinsicArgs) hir.HirGen.HirGenError!usize {
         const path = try args.get_arg("src", .string);
-        const full_path = try std.fs.cwd().realpathAlloc(args.hirgen.alloc, path);
+        const full_path = try args.hirgen.generation_root_dir.realpathAlloc(args.hirgen.alloc, path);
         defer args.hirgen.alloc.free(full_path);
 
         var maybe_included: ?hir.HirGen.CachedTree = null;
         if (args.hirgen.includes_cache.get(full_path)) |cached_tree| {
             maybe_included = cached_tree;
         } else {
-            var pipeline = try Pipeline.init(args.hirgen.alloc, .{});
+            const root_dir_path = std.fs.path.dirname(full_path);
+            var root_dir = try std.fs.openDirAbsolute(root_dir_path.?, .{});
+            defer root_dir.close();
+
+            var pipeline = try Pipeline.init(args.hirgen.alloc, .{
+                .root_dir = &root_dir,
+            });
             defer pipeline.deinit();
 
-            var file = try std.fs.cwd().openFile(path, .{});
+            var file = try args.hirgen.generation_root_dir.openFile(path, .{});
             defer file.close();
 
             const contents = try file.readToEndAlloc(args.hirgen.hir_tree.allocator(), std.math.maxInt(usize));
@@ -160,15 +215,15 @@ pub const DefaultIntrinsics = struct {
         }
         const included = maybe_included.?;
 
+        // Copy new AST into new AST
+        const new_root_id = try copyASTSubtreeIntoTree(args.hirgen.ast_tree, &included.tree, included.root);
+
         // Expand this new AST using some trickery, without introducing a new scope.
         var new_fragment = std.ArrayList(usize).init(args.hirgen.hir_tree.allocator());
-        const prev_ast_tree = args.hirgen.ast_tree;
-        args.hirgen.ast_tree = &included.tree;
-        const included_root_fragment = included.tree.nodes.items[included.root].fragment;
+        const included_root_fragment = args.hirgen.ast_tree.nodes.items[new_root_id].fragment;
         for (included_root_fragment) |ast_item| {
             try new_fragment.append(try args.hirgen.lowerNode(ast_item));
         }
-        args.hirgen.ast_tree = prev_ast_tree; // Go back to original state.
 
         return try args.hirgen.hir_tree.addNode(hir.Node{ .fragment = try new_fragment.toOwnedSlice() });
     }
@@ -199,7 +254,7 @@ pub const DefaultIntrinsics = struct {
     pub fn embedText(args: IntrinsicArgs) hir.HirGen.HirGenError!usize {
         const path = try args.get_arg("src", .string);
 
-        var file = try std.fs.cwd().openFile(path, .{});
+        var file = try args.hirgen.generation_root_dir.openFile(path, .{});
         defer file.close();
 
         const contents = try file.readToEndAlloc(args.hirgen.hir_tree.allocator(), std.math.maxInt(usize));
@@ -211,7 +266,7 @@ pub const DefaultIntrinsics = struct {
     pub fn embedRaw(args: IntrinsicArgs) hir.HirGen.HirGenError!usize {
         const path = try args.get_arg("src", .string);
 
-        var file = try std.fs.cwd().openFile(path, .{});
+        var file = try args.hirgen.generation_root_dir.openFile(path, .{});
         defer file.close();
 
         const contents = try file.readToEndAlloc(args.hirgen.hir_tree.allocator(), std.math.maxInt(usize));

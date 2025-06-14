@@ -1,0 +1,73 @@
+%include(src="./navigation.atra")
+
+html(lang="en") {
+    head {
+        title { "Atra - Modern Template Language" }
+
+        meta(charset="UTF-8")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        meta(name="description", content="Atra is a modern template language for web development")
+
+        link(rel="stylesheet", href="styles.css")
+    }
+
+    body {
+        %header {}
+
+        main {
+            section(class="hero") {
+                div(class="hero-content") {
+                    h1 { "Atra" }
+                    p { "Modern templating language for web development with components and advanced features" }
+                    div(class="cta-buttons") {
+                        a(href="installation.html", class="btn btn-primary") {
+                            "Get started!"
+                        }
+                        a(href="https://github.com/olix3001/atra-zig", class="btn btn-secondary") {
+                            "Github"
+                        }
+                    }
+                }
+            }
+        }
+
+        section(class="features") {
+            div(class="container") {
+                h2(class="section-title") { "Why Atra?" }
+                div(class="features-grid") {
+                    #$feature_card(icon="⚡", title="Fast", description="Compiles to static HTML without additional dependencies")
+                    #$feature_card(icon="🧩", title="Component-based", description="Create reusable components with parameters")
+                    #$feature_card(icon="🎨", title="Styling", description="Built-in CSS support with style isolation")
+                    #$feature_card(icon="🔄", title="Special functions", description="Loop, if, each and other advanced functions")
+                    #$feature_card(icon="📁", title="Organization", description="Clean file and folder structure")
+                    #$feature_card(icon="🛠️", title="Simple", description="Easy to learn HTML-like syntax")
+                }
+            }
+        }
+
+        section(class="quick-start") {
+            div(class="container") {
+                h2(class="section-title") { "Quick Start" }
+                p(style="text-align: center; margin-bottom: 2rem;") {
+                    "Create your first Atra page in a few simple steps:"
+                }
+
+                div(class="code-example") {
+                    pre {
+                        code {
+                            "// main.atra\nhtml(lang=\"en\") {\n  head {\n    title {\n      \"My Website\"\n    }\n  }\n  body {\n    h1 {\n      \"Welcome to Atra!\"\n    }\n    p {\n      \"This is my first page.\"\n    }\n  }\n}"
+                        }
+                    }
+                }
+
+                div(style="text-align: center; margin-top: 2rem;") {
+                    a(href="installation.html", class="btn btn-primary") {
+                        "View Installation Guide"
+                    }
+                }
+            }
+        }
+
+        %footer {}
+    }
+}
