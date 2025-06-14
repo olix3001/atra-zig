@@ -8,16 +8,27 @@
 
 This is a reimagined version of [funcieqDEV's](https://github.com/funcieqDEV) [Atra](https://github.com/funcieqDEV/Atra) html template engine.
 I **DO NOT** plan on supporting this project in the future,
-as it is only made for the purpose or learning zig programming language.
+as it is only made for the purpose of learning zig programming language.
 However at this point this project is kinda complete, with support for all major features (unstable).
 
 ## ✨ Features
 
 - **Component-based architecture** - Reusable components with `@<macro>` declarations,
 - **Modern syntax** - Clean and readable syntax,
-- **Fast compilation** - Built with Zig for maximum performance,
+- **Blazing fast compilation** - Built with Zig for maximum performance,
 - **Hot reloading** - Watch mode for instant development feedback (unavailable),
 - **Static output** - Generates (kinda) optimized HTML files.
+
+## 🏎️ Performance
+
+This project is written with performance in mind.
+To squeeze out the most from even worst PCs, heap allocations are used only
+where unavoidable. For example lexer (sometimes called scanner) does not allocate anything,
+but instead It works like an iterator scanning every token on demand, returning pointer to the original
+source instead of copying the data.
+
+There are many more tricks like this, all of which combined give unbelievable performance!
+Compiling file with 10000 lines takes less than 40ms on my computer, 30 of which are system calls.
 
 ## 🚀 Quick Start
 
@@ -28,7 +39,7 @@ However at this point this project is kinda complete, with support for all major
 1. Download the latest release from [GitHub Releases](https://github.com/olix3001/atra-zig/releases)
 
 **Windows & MacOS**
-Just run the installer from github releases.
+Just run the installer from github releases. (or compile if unavailable)
 
 **Linux**
 If you are using linux then just compile from source lol.
@@ -48,16 +59,22 @@ cd atra-zig
 ### Basic Commands
 
 ```bash
-# Build single file
+# Build single file (will output file.html)
 atra build file.atra
 
-# Build all directory
+# Build all directory.
+# This will compile all files whose names start with '+' symbol.
+# For example, if you name your file +index.atra, it will compile It as index.html.
+# This keeps project structure relative to project root, output is located in atra-out folder.
 atra build ./my-project
 
 # Watch for changes and rebuild automatically.
-# This expose development server on localhost:3000.
+# This exposes development server on localhost:3000.
 # If using directory index.atra will be used as /.
 atra watch file.atra
+
+# Same as above.
+atra watch ./my-project
 ```
 
 ### Basic Example
@@ -97,7 +114,7 @@ html(lang="en") {
 }
 ```
 
-This generates optimized html. There will be no indentations, because who really needs them?
+This generates optimized html. There will be no indentations, because who really needs them (and they can break indentation in things like code or pre tags)?
 
 ### Macros
 
